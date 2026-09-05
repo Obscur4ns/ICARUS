@@ -2,6 +2,7 @@ add_library(
     icarus_ipc
     STATIC
         src/bridge.cpp
+        src/session_state.cpp
 )
 
 add_library(icarus::ipc ALIAS icarus_ipc)

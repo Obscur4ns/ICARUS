@@ -21,7 +21,7 @@ The ArmA server is authoritative for gameplay state that affects other players.
 
 ### Native core
 
-A shared C++ library for code that must behave identically in the ArmA extension and TeamSpeak plugin.
+A shared C++ library for code that must behave identically in the ArmA extension and voice backend.
 
 Expected responsibilities include:
 
@@ -36,13 +36,15 @@ The native core does not become a second authoritative multiplayer database.
 
 ### Native IPC
 
-A Windows-native library shared by the ArmA extension and TeamSpeak plugin.
+A Windows-native library shared by the ArmA extension and voice backend.
 
-The initial transport uses named shared memory for process presence, protocol negotiation, heartbeat and health state.
+The process bridge uses named shared memory for process presence, protocol negotiation, heartbeat and health state.
+
+Session state uses a separate named shared-memory mapping with independently versioned snapshot layouts.
 
 Transport-specific code remains behind the `icarus::ipc` interface so later data paths can use a different mechanism without changing radio state ownership.
 
-The process bridge is a control and state path. It is not a voice transport.
+Neither mapping is a voice transport.
 
 ### ArmA extension
 
@@ -51,7 +53,7 @@ Responsible for high-cost or native-only work requested by the ArmA addon.
 Expected responsibilities include:
 
 - RF calculation work that is unsuitable for SQF.
-- Local IPC with the TeamSpeak plugin.
+- Local IPC with the voice backend.
 - Native platform services.
 - Bounded, validated exchange of state between ArmA and the local voice plugin.
 
@@ -59,9 +61,9 @@ The extension must not stream player voice through ArmA.
 
 ### TeamSpeak plugin
 
-Responsible for real-time voice behaviour.
+TeamSpeak 3 is the first voice backend.
 
-Expected responsibilities include:
+The plugin is responsible for:
 
 - TeamSpeak client identity mapping.
 - Positional voice handling.
@@ -92,15 +94,30 @@ UI / KDU / laptop / module
 
 Programming tools submit changes to the radio model. They do not own a separate copy of the radio.
 
-The TeamSpeak plugin consumes the local state it needs to render audio. It does not decide multiplayer radio ownership, key possession or inventory state.
+The voice backend consumes the local state it needs to render audio. It does not decide multiplayer radio ownership, key possession or inventory state.
 
-## Voice transport
+## Local process transport
 
-TeamSpeak transports voice between clients.
+ICARUS uses two independently versioned local transports.
 
-ICARUS passes control and simulation metadata between ArmA and the local TeamSpeak plugin. Voice audio is processed at the TeamSpeak side rather than being routed through SQF.
+```text
+Local\ICARUS.Bridge.1
+    process discovery
+    heartbeat
+    health
+    session generation
 
-The initial process bridge uses named shared memory in the local Windows session. The bridge exposes only protocol and health state at first. Higher-volume state exchange will be designed separately and must not make real-time audio callbacks wait on ArmA or IPC.
+Local\ICARUS.SessionState.1
+    ArmA player snapshot
+    voice-backend snapshot
+    state acknowledgement
+```
+
+The ArmA extension owns the session generation and creates the session-state mapping.
+
+Each state direction has a single writer and uses sequence-validated snapshots so readers do not accept partially-written state.
+
+TeamSpeak transports voice between clients. Voice samples are processed on the TeamSpeak side rather than being routed through SQF or the shared-memory state mappings.
 
 ## Environmental audio pickup
 

@@ -22,6 +22,8 @@ class CfgFunctions
             class extensionPing {};
             class extensionVersion {};
             class bridgeStatus {};
+            class publishSessionState {};
+            class sessionStatus {};
 
             class initBridge
             {
