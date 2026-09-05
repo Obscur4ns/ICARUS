@@ -1,53 +1,100 @@
 # Development
 
-## Repository
+## Branches
 
-`main` is the authoritative project state.
+`main` is the stable project baseline.
 
-Changes should be made in small, testable commits. A commit should normally introduce one subsystem, one refactor or one documented decision rather than several unrelated changes.
+`development` is the permanent integration branch.
 
-## Code style
+Normal work is done on short-lived branches created from an up-to-date `development` branch:
 
-- Prefer specific names over generic manager/handler classes.
-- Comments explain constraints, reasons and non-obvious behaviour.
-- Do not comment code that is already self-explanatory.
-- Avoid abstractions that have no current architectural purpose.
+```text
+feature/<name>
+fix/<name>
+refactor/<name>
+docs/<name>
+```
+
+A branch returns to `development` after its build, tests and review pass. Tested integration checkpoints are promoted from `development` to `main`.
+
+Direct work on `main` should be exceptional.
+
+## Commits
+
+Keep commits narrow and testable. A commit should normally contain one coherent change.
+
+Commit messages describe the change, not the development process.
+
+Examples:
+
+```text
+Add HEMTT project configuration
+Add native extension smoke-test entry points
+Fix radio identity replication after JIP
+```
+
+## Build ownership
+
+HEMTT owns:
+
+- ArmA addon validation.
+- PBO construction.
+- Development links.
+- ArmA launch profiles.
+- Signing and ArmA release packaging.
+
+CMake owns:
+
+- Shared native code.
+- ArmA extension builds.
+- TeamSpeak plugin builds.
+- Native tests and compiler configuration.
+
+Neither build system should be stretched into replacing the other.
+
+## Code
+
+- C++20 for native components.
+- SQF/config for ArmA-side code.
+- CMake with MSVC for Windows native builds.
+- Compiler warnings are build failures.
+- Prefer specific names over generic manager or handler classes.
 - Keep interfaces narrow.
-- Keep real-time audio paths allocation-light and non-blocking.
-- Validate all data crossing ArmA/native/TeamSpeak boundaries.
-- Use one term consistently for one concept.
+- Do not put blocking work in real-time audio callbacks.
+- Validate data crossing ArmA, native and TeamSpeak boundaries.
+- Keep one term for one concept throughout code and documentation.
+- Comments explain constraints or non-obvious reasons rather than restating code.
 
-## Languages and tools
+## State ownership
 
-- ArmA: SQF and config.
-- Native: C++20.
-- Native build: CMake with MSVC on Windows x64.
-- ArmA packaging scripts will be added once the initial addon layout exists.
+Authoritative gameplay state belongs to the ArmA simulation/server side.
+
+UI, programming tools, the native extension and TeamSpeak plugin consume or request changes to that state; they do not maintain competing authoritative radio databases.
 
 ## Third-party work
 
 Reference implementations may be inspected when useful.
 
-Any copied or adapted code or assets must retain required attribution, notices and licence terms. New ICARUS code should not disguise third-party provenance.
+Copied or adapted code and assets retain required attribution, notices and licence terms. Third-party provenance is not obscured.
 
-Third-party source should live in a clearly identified location or be brought in through an explicit dependency rather than copied into unrelated project files.
+Dependencies should be external or isolated rather than copied into unrelated ICARUS source directories.
 
 ## Testing
 
-Every cross-process or replicated state path needs failure testing, not only the successful path.
+Every cross-process or replicated state path needs failure testing as well as a successful-path test.
 
-At minimum, new systems should consider:
+Relevant cases include:
 
 - Dedicated server.
 - JIP.
-- Disconnect/reconnect.
+- Disconnect and reconnect.
 - Respawn.
 - Equipment transfer.
-- TeamSpeak disconnect/reconnect.
+- TeamSpeak disconnect and reconnect.
 - Plugin reload.
 - Version mismatch.
 - Invalid or stale IPC data.
 - Missing native extension.
 - Missing TeamSpeak plugin.
 
-Performance-sensitive systems should have diagnostics before they have complex optimisation.
+Performance-sensitive systems should expose diagnostics before complex optimisation is introduced.

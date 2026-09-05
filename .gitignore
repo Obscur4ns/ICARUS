@@ -1,46 +1,40 @@
-# Build output
-/build/
-/out/
-/dist/
-/release/
-/@ICARUS/
+# HEMTT
+/.hemttout/
+/releases/
+.hemttprivatekey
 
-# Native build output
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-*.sln
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
-*.obj
-*.pdb
-*.ilk
-*.lib
-*.exp
+# Native builds and dependencies
+/build/
+/.deps/
+
+# Generated binaries
 *.dll
 *.exe
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.obj
 
-# ArmA output
+# ArmA build output
 *.pbo
 *.bisign
 *.biprivatekey
+*.bikey
 *.rpt
 
-# IDE and local tooling
+# IDE
 .vs/
 .vscode/
 .idea/
 *.user
 *.suo
 
-# OS
-Thumbs.db
-Desktop.ini
-.DS_Store
-
-# Logs and scratch
+# Local files
 *.log
 *.tmp
 *.bak
 *.swp
+Thumbs.db
+Desktop.ini
+.DS_Store

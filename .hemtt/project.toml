@@ -1,0 +1,11 @@
+name = "ICARUS"
+prefix = "icarus"
+mainprefix = "z"
+
+[version]
+path = "addons/main/script_version.hpp"
+git_hash = 0
+
+[properties]
+author = "ICARUS Project"
+url = "https://github.com/Obscur4ns/ICARUS"

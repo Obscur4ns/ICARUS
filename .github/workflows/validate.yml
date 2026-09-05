@@ -1,0 +1,55 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - development
+      - main
+  pull_request:
+    branches:
+      - development
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  arma:
+    name: ArmA / HEMTT
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup HEMTT
+        uses: arma-actions/hemtt@v1
+        with:
+          version: "v1.21.0"
+
+      - name: Lint
+        run: hemtt check --pedantic --error-on-all
+
+      - name: Build
+        run: hemtt build --no-bin
+
+  native:
+    name: Native / Windows x64
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch TeamSpeak 3 Plugin SDK
+        shell: pwsh
+        run: .\tools\fetch-ts3-sdk.ps1
+
+      - name: Configure
+        run: cmake --preset windows-x64-ts3
+
+      - name: Build
+        run: cmake --build --preset windows-x64-ts3-release
+
+      - name: Test
+        run: ctest --preset windows-x64-ts3-release
