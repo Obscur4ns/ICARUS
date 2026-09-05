@@ -1,0 +1,9 @@
+name = "ICARUS";
+author = "ICARUS Project";
+tooltip = "ICARUS";
+tooltipOwned = "ICARUS";
+actionName = "GitHub";
+action = "https://github.com/Obscur4ns/ICARUS";
+overview = "Intelligent Communications And Radio User System for ArmA 3.";
+hideName = 0;
+hidePicture = 1;

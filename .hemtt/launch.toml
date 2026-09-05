@@ -1,0 +1,9 @@
+[default]
+parameters = [
+    "-skipIntro",
+    "-noSplash",
+    "-showScriptErrors",
+]
+file_patching = true
+binarize = false
+rapify = true

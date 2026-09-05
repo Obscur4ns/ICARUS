@@ -22,6 +22,14 @@ The project is pre-alpha. There is no working release yet.
 
 The intended feature set is recorded in [docs/features.md](docs/features.md). The system boundaries are recorded in [docs/architecture.md](docs/architecture.md).
 
+## Development
+
+`main` is the stable baseline. `development` is the integration branch. Normal work is done on short-lived branches from `development`.
+
+ArmA addon work uses HEMTT. Native code uses CMake and MSVC.
+
+See [docs/building.md](docs/building.md) and [docs/development.md](docs/development.md).
+
 ## Status
 
-Initial architecture and feature definition.
+Project foundation.
