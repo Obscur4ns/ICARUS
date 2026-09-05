@@ -24,6 +24,10 @@ class CfgFunctions
             class bridgeStatus {};
             class publishSessionState {};
             class sessionStatus {};
+            class directVoiceStatus {};
+            class getVoiceLevel {};
+            class setVoiceLevel {};
+            class cycleVoiceLevel {};
 
             class initBridge
             {

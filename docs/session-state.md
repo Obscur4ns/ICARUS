@@ -6,7 +6,7 @@ It does not contain radio state yet.
 
 ## ArmA to voice backend
 
-The initial ArmA snapshot contains:
+The ArmA snapshot contains:
 
 - ICARUS session ID.
 - Player UID.
@@ -24,7 +24,7 @@ The snapshot sequence and native update timestamp are maintained by the shared-m
 
 ## Voice backend to ArmA
 
-The initial voice-backend snapshot contains:
+The voice-backend snapshot contains:
 
 - Connection ID.
 - Local client ID.
@@ -33,14 +33,15 @@ The initial voice-backend snapshot contains:
 - Session-state protocol version.
 - Acknowledged ArmA session ID.
 - Acknowledged ArmA snapshot sequence.
+- Compatible feature flags for speaking and identity state.
 
 For TeamSpeak 3, the generic connection ID currently contains the TeamSpeak server connection handler ID.
 
 ## Spectator integration
 
-ICARUS detects the built-in End Game spectator state when its spectator script is active.
+Spectator state defaults to `false`.
 
-Mission frameworks may explicitly override this with:
+Mission or spectator-framework integrations may set it explicitly:
 
 ```sqf
 missionNamespace setVariable ["ICARUS_isSpectator", true];
@@ -52,11 +53,11 @@ and clear it with:
 missionNamespace setVariable ["ICARUS_isSpectator", false];
 ```
 
-A later spectator integration layer will provide adapters for common mission frameworks.
+A later spectator integration layer will provide adapters for supported spectator frameworks.
 
 ## Voice level
 
-Until the direct-voice control layer is implemented, ICARUS defaults to voice level `3`, which is `normal`.
+Direct voice defaults to level `3`, `normal`.
 
 The current value is stored in:
 
@@ -74,6 +75,8 @@ Protocol values are:
 4 raised
 5 shout
 ```
+
+The public direct-voice setter limits selectable values to `1` through `5`.
 
 ## Vehicle role
 
@@ -97,26 +100,14 @@ With ArmA and TeamSpeak running:
 [] call ICARUS_fnc_sessionStatus
 ```
 
-A healthy result resembles:
-
-```text
-transport=ready;protocol=1.0;generation=...;armaValid=1;armaSeq=...;playerUid=...;networkId=...;position=[...];alive=1;spectator=0;inVehicle=0;voiceLevel=normal;vehicleRole=none;voiceValid=1;voiceSeq=...;voiceConnection=established;voiceConnectionId=...;voiceClientId=...;voiceHealth=ready;ackSession=...;ackArmaSeq=...
-```
+The session protocol is currently `1.1`.
 
 The acknowledgement session should match the current generation.
 
 `ackArmaSeq` should advance as ArmA publishes new snapshots.
 
-## Runtime checks
+Direct-voice-specific diagnostics are available through:
 
-Test the following before merging this subsystem:
-
-1. Player movement changes the reported position.
-2. `armaSeq` advances while the player session is active.
-3. TeamSpeak reports `established` and a non-zero local client ID while connected.
-4. `ackSession` matches the current ArmA generation.
-5. `ackArmaSeq` follows the ArmA sequence.
-6. Entering and leaving a vehicle changes `inVehicle`, vehicle ID and role.
-7. Closing TeamSpeak makes the voice-backend snapshot stop advancing.
-8. Restarting TeamSpeak resumes acknowledgement without restarting ArmA.
-9. Restarting ArmA creates a new session generation and TeamSpeak acknowledges it.
+```sqf
+[] call ICARUS_fnc_directVoiceStatus
+```

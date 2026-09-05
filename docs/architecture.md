@@ -96,6 +96,8 @@ Programming tools submit changes to the radio model. They do not own a separate 
 
 The voice backend consumes the local state it needs to render audio. It does not decide multiplayer radio ownership, key possession or inventory state.
 
+Direct-voice identity mapping never uses display nicknames. ArmA player UID and network identity are joined to TeamSpeak's callback-provided client ID and unique identity. A later authoritative ArmA player roster determines which discovered voice identities belong to the current game session.
+
 ## Local process transport
 
 ICARUS uses two independently versioned local transports.
@@ -118,6 +120,8 @@ The ArmA extension owns the session generation and creates the session-state map
 Each state direction has a single writer and uses sequence-validated snapshots so readers do not accept partially-written state.
 
 TeamSpeak transports voice between clients. Voice samples are processed on the TeamSpeak side rather than being routed through SQF or the shared-memory state mappings.
+
+TeamSpeak plugin commands are used for low-frequency identity discovery between ICARUS plugin instances. They are not used for per-frame position updates, audio samples or authoritative gameplay state.
 
 ## Environmental audio pickup
 

@@ -7,7 +7,7 @@ namespace icarus::core
 {
 inline constexpr std::uint32_t session_state_magic = 0x49435353U;
 inline constexpr std::uint16_t session_state_protocol_major = 1;
-inline constexpr std::uint16_t session_state_protocol_minor = 0;
+inline constexpr std::uint16_t session_state_protocol_minor = 1;
 
 enum class ArmaSessionFlag : std::uint32_t
 {
@@ -53,6 +53,13 @@ enum class VoiceBackendHealth : std::uint32_t
     fault = 4,
 };
 
+enum class VoiceBackendSessionFlag : std::uint32_t
+{
+    local_talking = 1U << 0U,
+    identity_ready = 1U << 1U,
+    identity_announced = 1U << 2U,
+};
+
 struct alignas(8) SessionStateHeader
 {
     std::uint32_t ready;
@@ -87,7 +94,7 @@ struct alignas(8) VoiceBackendSessionState
     std::uint32_t health;
     std::uint16_t state_protocol_major;
     std::uint16_t state_protocol_minor;
-    std::uint32_t reserved;
+    std::uint32_t flags;
 };
 
 template<typename Payload>
@@ -106,6 +113,14 @@ struct alignas(8) SessionStatePage
 };
 
 [[nodiscard]] constexpr bool has_flag(std::uint32_t flags, ArmaSessionFlag flag) noexcept
+{
+    return (flags & static_cast<std::uint32_t>(flag)) != 0;
+}
+
+[[nodiscard]] constexpr bool has_flag(
+    std::uint32_t flags,
+    VoiceBackendSessionFlag flag
+) noexcept
 {
     return (flags & static_cast<std::uint32_t>(flag)) != 0;
 }
