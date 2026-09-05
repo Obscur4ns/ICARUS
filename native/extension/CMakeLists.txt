@@ -4,7 +4,13 @@ add_library(
         src/extension.cpp
 )
 
-target_link_libraries(icarus_extension PRIVATE icarus::core)
+target_link_libraries(
+    icarus_extension
+    PRIVATE
+        icarus::core
+        icarus::ipc
+)
+
 target_compile_features(icarus_extension PRIVATE cxx_std_20)
 
 set_target_properties(

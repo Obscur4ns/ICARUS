@@ -34,6 +34,16 @@ Expected responsibilities include:
 
 The native core does not become a second authoritative multiplayer database.
 
+### Native IPC
+
+A Windows-native library shared by the ArmA extension and TeamSpeak plugin.
+
+The initial transport uses named shared memory for process presence, protocol negotiation, heartbeat and health state.
+
+Transport-specific code remains behind the `icarus::ipc` interface so later data paths can use a different mechanism without changing radio state ownership.
+
+The process bridge is a control and state path. It is not a voice transport.
+
 ### ArmA extension
 
 Responsible for high-cost or native-only work requested by the ArmA addon.
@@ -90,7 +100,7 @@ TeamSpeak transports voice between clients.
 
 ICARUS passes control and simulation metadata between ArmA and the local TeamSpeak plugin. Voice audio is processed at the TeamSpeak side rather than being routed through SQF.
 
-The IPC transport is an implementation detail and is intentionally not fixed yet. Named pipes and shared memory are both proven approaches in existing ArmA radio projects. The first implementation should benchmark the current options and hide the chosen transport behind a small interface.
+The initial process bridge uses named shared memory in the local Windows session. The bridge exposes only protocol and health state at first. Higher-volume state exchange will be designed separately and must not make real-time audio callbacks wait on ArmA or IPC.
 
 ## Environmental audio pickup
 

@@ -11,7 +11,13 @@ add_library(
         src/plugin.cpp
 )
 
-target_link_libraries(icarus_ts3_plugin PRIVATE icarus::core)
+target_link_libraries(
+    icarus_ts3_plugin
+    PRIVATE
+        icarus::core
+        icarus::ipc
+)
+
 target_compile_features(icarus_ts3_plugin PRIVATE cxx_std_20)
 
 target_include_directories(
