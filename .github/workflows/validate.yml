@@ -48,7 +48,7 @@ jobs:
           unzip -q "$hemtt_archive" -d "$hemtt_dir"
           chmod +x "$hemtt_dir/hemtt"
 
-          actual_version="$("$hemtt_dir/hemtt" --version)"
+          actual_version="$("$hemtt_dir/hemtt" --version 2>&1 || true)"
           expected_version="hemtt ${HEMTT_VERSION}"
 
           if [[ "$actual_version" != "$expected_version" ]]; then
