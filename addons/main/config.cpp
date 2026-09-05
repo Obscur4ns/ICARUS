@@ -28,6 +28,8 @@ class CfgFunctions
             class getVoiceLevel {};
             class setVoiceLevel {};
             class cycleVoiceLevel {};
+            class publishSpatialScene {};
+            class spatialSceneStatus {};
 
             class initBridge
             {

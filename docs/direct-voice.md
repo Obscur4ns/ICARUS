@@ -4,7 +4,7 @@ This stage establishes direct-voice state and TeamSpeak identity mapping. It doe
 
 ## Voice levels
 
-ArmA owns the selected direct-voice level.
+ArmA owns the selected direct-voice level. The owning client also stores it on the player object for remote spatial-scene sampling, and only broadcasts that object variable when the selected level changes.
 
 ```text
 1 whisper

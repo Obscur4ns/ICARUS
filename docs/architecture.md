@@ -6,75 +6,41 @@ ICARUS is split into systems with deliberately narrow ownership. UI code, progra
 
 ### ArmA addon
 
-Responsible for:
+Responsible for physical equipment, player and world state, UI/input, mission integration, multiplayer replication and the authoritative gameplay-side radio model.
 
-- Physical equipment and inventory integration.
-- Player, vehicle and world state.
-- Radio and audio-device definitions.
-- Input and UI.
-- Mission modules.
-- Server-authoritative radio identities and gameplay state.
-- Multiplayer replication.
-- Calls into the native extension.
-
-The ArmA server is authoritative for gameplay state that affects other players.
+The ArmA server remains authoritative for gameplay state that affects other players.
 
 ### Native core
 
-A shared C++ library for code that must behave identically in the ArmA extension and voice backend.
+Shared C++ types and calculations used by both native processes. This includes protocol definitions, validation, RF primitives and DSP utilities that do not depend on TeamSpeak callbacks.
 
-Expected responsibilities include:
-
-- Shared data structures.
-- IPC protocol types and versioning.
-- RF calculation primitives.
-- Waveform and signal-quality models that are safe to share.
-- Audio/DSP utilities that do not depend on TeamSpeak callbacks.
-- Serialization and validation.
-
-The native core does not become a second authoritative multiplayer database.
+The native core is not a second multiplayer authority.
 
 ### Native IPC
 
-A Windows-native library shared by the ArmA extension and voice backend.
+Windows-local transport shared by the ArmA extension and voice backend.
 
-The process bridge uses named shared memory for process presence, protocol negotiation, heartbeat and health state.
+Current mappings are independently versioned:
 
-Session state uses a separate named shared-memory mapping with independently versioned snapshot layouts.
+```text
+Local\ICARUS.Bridge.1
+Local\ICARUS.SessionState.1
+Local\ICARUS.SpatialScene.1
+```
 
-Transport-specific code remains behind the `icarus::ipc` interface so later data paths can use a different mechanism without changing radio state ownership.
+The process bridge carries discovery, heartbeat, process health and session generation. Session state carries the local player's detailed state and voice-backend acknowledgements. Spatial scene carries a bounded local view of ArmA player actors for later positional audio processing.
 
-Neither mapping is a voice transport.
+None of these mappings carry voice samples.
 
 ### ArmA extension
 
-Responsible for high-cost or native-only work requested by the ArmA addon.
-
-Expected responsibilities include:
-
-- RF calculation work that is unsuitable for SQF.
-- Local IPC with the voice backend.
-- Native platform services.
-- Bounded, validated exchange of state between ArmA and the local voice plugin.
-
-The extension must not stream player voice through ArmA.
+Responsible for native work requested by the ArmA addon and bounded local exchange with the voice backend. It does not stream player voice through SQF or ArmA networking.
 
 ### TeamSpeak plugin
 
-TeamSpeak 3 is the first voice backend.
+TeamSpeak 3 is the initial voice backend. The plugin owns real-time voice behaviour, TeamSpeak client identity mapping, positional playback, DSP, ear routing and safe restoration of ordinary TeamSpeak behaviour when ICARUS is inactive.
 
-The plugin is responsible for:
-
-- TeamSpeak client identity mapping.
-- Positional voice handling.
-- Radio receive/transmit audio processing.
-- Channel muting/routing required by the simulation.
-- DSP.
-- Ear routing.
-- Sidetone.
-- Safe restoration of ordinary TeamSpeak behaviour when ICARUS is inactive.
-
-Real-time audio callbacks must not wait on ArmA, the network or expensive RF calculations.
+Real-time audio callbacks must never wait on ArmA, IPC, network I/O or expensive RF work.
 
 ## State ownership
 
@@ -92,56 +58,45 @@ UI / KDU / laptop / module
  RF/link state   voice/audio state
 ```
 
-Programming tools submit changes to the radio model. They do not own a separate copy of the radio.
+Programming tools submit changes to the radio model. They do not own separate copies of the radio.
 
-The voice backend consumes the local state it needs to render audio. It does not decide multiplayer radio ownership, key possession or inventory state.
+The voice backend consumes state required to render audio. It does not decide inventory ownership, key possession or multiplayer radio authority.
 
-Direct-voice identity mapping never uses display nicknames. ArmA player UID and network identity are joined to TeamSpeak's callback-provided client ID and unique identity. A later authoritative ArmA player roster determines which discovered voice identities belong to the current game session.
+Direct-voice identity mapping never uses display nicknames. ArmA player UID and network identity are joined to TeamSpeak's callback-provided client ID and unique identity. TeamSpeak identity discovery is not game authority.
 
-## Local process transport
+## Local spatial scene
 
-ICARUS uses two independently versioned local transports.
+Each ArmA client already receives remote-player movement through normal ArmA replication. ICARUS samples that local view and publishes a bounded scene to its local extension at approximately 10 Hz.
 
-```text
-Local\ICARUS.Bridge.1
-    process discovery
-    heartbeat
-    health
-    session generation
+A spatial actor contains:
 
-Local\ICARUS.SessionState.1
-    ArmA player snapshot
-    voice-backend snapshot
-    state acknowledgement
-```
+- ArmA player UID and network ID.
+- Eye position and head direction.
+- World velocity.
+- Alive and in-vehicle state.
+- Direct-voice level.
 
-The ArmA extension owns the session generation and creates the session-state mapping.
+The initial capacity is 256 actors. ICARUS targets 120-player sessions, leaving headroom without making the shared-memory page unbounded.
 
-Each state direction has a single writer and uses sequence-validated snapshots so readers do not accept partially-written state.
+Velocity is transported with position so the later acoustic renderer can interpolate or extrapolate between ArmA snapshots rather than coupling audio placement to the 10 Hz scene rate.
 
-TeamSpeak transports voice between clients. Voice samples are processed on the TeamSpeak side rather than being routed through SQF or the shared-memory state mappings.
+## Voice transport
 
-TeamSpeak plugin commands are used for low-frequency identity discovery between ICARUS plugin instances. They are not used for per-frame position updates, audio samples or authoritative gameplay state.
+TeamSpeak transports voice between clients. Voice samples are processed on the TeamSpeak side rather than being routed through SQF or shared memory.
+
+TeamSpeak plugin commands are used only for low-frequency ICARUS identity discovery. They are not used for player positions, per-frame state or audio samples.
 
 ## Environmental audio pickup
 
-Environmental pickup is part of the microphone model.
-
-The implementation must avoid feeding received ICARUS/TeamSpeak audio back into outgoing radio transmissions. The audio source and filtering approach therefore needs to be designed separately from ordinary TeamSpeak playback.
-
-If a physical in-world speaker is intentionally audible to a nearby microphone, that is a simulated acoustic path rather than an accidental software feedback loop.
+Environmental pickup is part of the microphone model. The implementation must avoid feeding received ICARUS/TeamSpeak audio back into outgoing transmissions. Deliberate physical speaker-to-microphone pickup is a simulated acoustic path, not a software feedback loop.
 
 ## RF processing
 
-RF calculations produce link state. Audio code consumes that state.
-
-A receiver should receive information such as signal level, interference, SNR/SINR and decode quality rather than a simple in-range boolean. Waveform logic then determines whether and how the transmission is intelligible.
+RF calculations produce link state. Audio code consumes signal level, interference, SNR/SINR, decode quality and related metrics rather than a simple in-range boolean.
 
 ## Extensibility
 
-Hardware definitions should be data-driven where practical. Core code must not contain branches for individual radio models unless the behaviour is genuinely framework-level.
-
-Third-party equipment should use public definitions and APIs rather than patching private implementation details.
+Hardware definitions should be data-driven where practical. Third-party equipment should use public definitions and APIs rather than patching private implementation details.
 
 ## Initial platform
 

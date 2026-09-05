@@ -3,6 +3,7 @@ add_library(
     STATIC
         src/bridge.cpp
         src/session_state.cpp
+        src/spatial_scene.cpp
 )
 
 add_library(icarus::ipc ALIAS icarus_ipc)

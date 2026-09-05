@@ -1,14 +1,17 @@
 #include <icarus/core/identity_protocol.hpp>
 #include <icarus/core/session_state_protocol.hpp>
+#include <icarus/core/spatial_scene_protocol.hpp>
 #include <icarus/core/version.hpp>
 #include <icarus/ipc/bridge.hpp>
 #include <icarus/ipc/session_state.hpp>
+#include <icarus/ipc/spatial_scene.hpp>
 
 #include <teamspeak/public_definitions.h>
 #include <teamspeak/public_errors.h>
 #include <teamspeak/public_rare_definitions.h>
 #include <ts3_functions.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -30,6 +33,7 @@ struct TS3Functions ts3_functions
 
 icarus::ipc::BridgeEndpoint bridge(icarus::ipc::BridgeRole::teamspeak);
 icarus::ipc::SessionStateChannel session_state(icarus::ipc::BridgeRole::teamspeak);
+icarus::ipc::SpatialSceneChannel spatial_scene(icarus::ipc::BridgeRole::teamspeak);
 
 std::mutex voice_state_mutex;
 icarus::core::VoiceBackendSessionState voice_state{};
@@ -404,6 +408,37 @@ bool local_identity_announced()
     return local_identity.valid && local_identity.announced;
 }
 
+
+std::uint32_t count_matched_actors(const icarus::core::SpatialSceneState& scene)
+{
+    std::scoped_lock lock(identity_mutex);
+    std::uint32_t matched{};
+
+    const std::uint32_t actor_count = std::min(
+        scene.actor_count,
+        static_cast<std::uint32_t>(icarus::core::spatial_scene_max_actors)
+    );
+
+    for(std::uint32_t actor_index = 0; actor_index < actor_count; ++actor_index)
+    {
+        const auto& actor = scene.actors[actor_index];
+
+        for(const auto& entry : identities)
+        {
+            const auto& identity = entry.second;
+
+            if(identity.player_uid == actor.player_uid
+                && identity.network_id == actor.network_id)
+            {
+                ++matched;
+                break;
+            }
+        }
+    }
+
+    return matched;
+}
+
 void run_state_worker(std::stop_token stop_token)
 {
     while(!stop_token.stop_requested())
@@ -412,6 +447,7 @@ void run_state_worker(std::stop_token stop_token)
 
         if(bridge_status.generation == 0)
         {
+            spatial_scene.reset();
             session_state.reset();
             invalidate_local_identity();
             std::this_thread::sleep_for(state_publish_interval);
@@ -498,6 +534,26 @@ void run_state_worker(std::stop_token stop_token)
             }
 
             static_cast<void>(session_state.publish_voice_backend(state));
+        }
+
+        if(spatial_scene.sync(bridge_status.generation))
+        {
+            const auto scene = spatial_scene.read_arma();
+
+            if(scene.valid)
+            {
+                icarus::core::VoiceBackendSpatialState acknowledgement{};
+                acknowledgement.acknowledged_scene_sequence = scene.sequence;
+                acknowledgement.observed_actor_count = std::min(
+                    scene.payload.actor_count,
+                    static_cast<std::uint32_t>(icarus::core::spatial_scene_max_actors)
+                );
+                acknowledgement.matched_actor_count = count_matched_actors(scene.payload);
+
+                static_cast<void>(
+                    spatial_scene.publish_voice_backend(acknowledgement)
+                );
+            }
         }
 
         std::this_thread::sleep_for(state_publish_interval);
@@ -592,6 +648,7 @@ ICARUS_TS3_EXPORT int ts3plugin_init()
     log_message("ICARUS process bridge service started.", LogLevel_INFO);
     log_message("ICARUS session state service started.", LogLevel_INFO);
     log_message("ICARUS direct voice state service started.", LogLevel_INFO);
+    log_message("ICARUS spatial scene service started.", LogLevel_INFO);
     return 0;
 }
 
@@ -606,6 +663,7 @@ ICARUS_TS3_EXPORT void ts3plugin_shutdown()
         state_worker.join();
     }
 
+    spatial_scene.reset();
     session_state.reset();
     bridge.stop();
 
