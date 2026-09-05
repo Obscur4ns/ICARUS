@@ -32,6 +32,7 @@ if((ICARUS_BUILD_EXTENSION OR ICARUS_BUILD_TS3_PLUGIN) AND NOT CMAKE_SIZEOF_VOID
 endif()
 
 add_subdirectory(native/core)
+add_subdirectory(native/ipc)
 
 if(ICARUS_BUILD_EXTENSION)
     add_subdirectory(native/extension)
@@ -44,4 +45,5 @@ endif()
 if(ICARUS_BUILD_TESTS)
     enable_testing()
     add_subdirectory(native/core/tests)
+    add_subdirectory(native/ipc/tests)
 endif()

@@ -21,6 +21,12 @@ class CfgFunctions
 
             class extensionPing {};
             class extensionVersion {};
+            class bridgeStatus {};
+
+            class initBridge
+            {
+                postInit = 1;
+            };
         };
     };
 };
