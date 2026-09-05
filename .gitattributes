@@ -1,0 +1,22 @@
+* text=auto eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.paa binary
+*.pac binary
+*.p3d binary
+*.rtm binary
+*.ogg binary
+*.wav binary
+*.wss binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.dll binary
+*.exe binary
+*.pbo binary
+*.bisign binary
+*.bikey binary

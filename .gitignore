@@ -1,0 +1,46 @@
+# Build output
+/build/
+/out/
+/dist/
+/release/
+/@ICARUS/
+
+# Native build output
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.obj
+*.pdb
+*.ilk
+*.lib
+*.exp
+*.dll
+*.exe
+
+# ArmA output
+*.pbo
+*.bisign
+*.biprivatekey
+*.rpt
+
+# IDE and local tooling
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs and scratch
+*.log
+*.tmp
+*.bak
+*.swp
