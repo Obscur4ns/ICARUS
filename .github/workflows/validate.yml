@@ -13,6 +13,9 @@ on:
 permissions:
   contents: read
 
+env:
+  HEMTT_VERSION: "1.21.0"
+
 jobs:
   arma:
     name: ArmA / HEMTT
@@ -20,12 +23,41 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup HEMTT
-        uses: arma-actions/hemtt@v1
-        with:
-          version: "v1.21.0"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          hemtt_dir="$RUNNER_TEMP/hemtt"
+          hemtt_archive="$RUNNER_TEMP/hemtt-linux-x64.zip"
+
+          curl \
+            --fail \
+            --location \
+            --show-error \
+            --silent \
+            --retry 5 \
+            --retry-delay 2 \
+            --retry-all-errors \
+            "https://github.com/BrettMayson/HEMTT/releases/download/v${HEMTT_VERSION}/linux-x64.zip" \
+            --output "$hemtt_archive"
+
+          mkdir -p "$hemtt_dir"
+          unzip -q "$hemtt_archive" -d "$hemtt_dir"
+          chmod +x "$hemtt_dir/hemtt"
+
+          actual_version="$("$hemtt_dir/hemtt" --version 2>&1 || true)"
+          expected_version="hemtt ${HEMTT_VERSION}"
+
+          if [[ "$actual_version" != "$expected_version" ]]; then
+            echo "Expected $expected_version but found $actual_version."
+            exit 1
+          fi
+
+          echo "$hemtt_dir" >> "$GITHUB_PATH"
+          echo "Using $actual_version"
 
       - name: Lint
         run: hemtt check --pedantic --error-on-all
@@ -39,7 +71,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Fetch TeamSpeak 3 Plugin SDK
         shell: pwsh
