@@ -167,7 +167,85 @@ std::string format_session_status()
                << ";voiceClientId=" << voice.payload.local_client_id
                << ";voiceHealth=" << icarus::core::to_string(health)
                << ";ackSession=" << voice.payload.acknowledged_session_id
-               << ";ackArmaSeq=" << voice.payload.acknowledged_arma_sequence;
+               << ";ackArmaSeq=" << voice.payload.acknowledged_arma_sequence
+               << ";localTalking="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::local_talking
+                   )
+                       ? 1
+                       : 0)
+               << ";identityReady="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::identity_ready
+                   )
+                       ? 1
+                       : 0)
+               << ";identityAnnounced="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::identity_announced
+                   )
+                       ? 1
+                       : 0);
+    }
+
+    return stream.str();
+}
+
+
+std::string format_direct_voice_status()
+{
+    const auto bridge_status = bridge.status();
+
+    if(bridge_status.generation == 0 || !session_state.sync(bridge_status.generation))
+    {
+        return "state=transport_unavailable";
+    }
+
+    const auto arma = session_state.read_arma();
+    const auto voice = session_state.read_voice_backend();
+
+    if(!arma.valid)
+    {
+        return "state=waiting_for_arma";
+    }
+
+    const auto level =
+        static_cast<icarus::core::VoiceLevel>(arma.payload.voice_level);
+
+    std::ostringstream stream;
+    stream << "state=" << (voice.valid ? "ready" : "waiting_for_voice_backend")
+           << ";protocol=" << icarus::core::session_state_protocol_major
+           << '.' << icarus::core::session_state_protocol_minor
+           << ";level=" << icarus::core::to_string(level);
+
+    if(voice.valid)
+    {
+        stream << ";talking="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::local_talking
+                   )
+                       ? 1
+                       : 0)
+               << ";identityReady="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::identity_ready
+                   )
+                       ? 1
+                       : 0)
+               << ";identityAnnounced="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::identity_announced
+                   )
+                       ? 1
+                       : 0)
+               << ";clientId=" << voice.payload.local_client_id
+               << ";connectionId=" << voice.payload.connection_id;
     }
 
     return stream.str();
@@ -217,6 +295,11 @@ std::string dispatch(std::string_view function)
     if(function == "session_status")
     {
         return format_session_status();
+    }
+
+    if(function == "direct_voice_status")
+    {
+        return format_direct_voice_status();
     }
 
     return "unsupported";
