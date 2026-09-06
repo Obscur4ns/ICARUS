@@ -1,6 +1,7 @@
 add_library(
     icarus_core
     STATIC
+        src/direct_voice_acoustics.cpp
         src/version.cpp
 )
 

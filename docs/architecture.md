@@ -42,6 +42,9 @@ TeamSpeak 3 is the initial voice backend. The plugin owns real-time voice behavi
 
 Real-time audio callbacks must never wait on ArmA, IPC, network I/O or expensive RF work.
 
+
+Direct voice uses TeamSpeak's 3D listener and client positioning. A dedicated acoustic worker consumes spatial-scene snapshots, performs bounded prediction/smoothing, and publishes lock-free rolloff state for the real-time callback. Unmatched TeamSpeak clients remain outside ICARUS acoustic control.
+
 ## State ownership
 
 The logical radio state has one source of authority in the game simulation.

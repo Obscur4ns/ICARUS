@@ -1,8 +1,8 @@
 # Spatial scene transport
 
-The spatial scene is the local ArmA-to-voice-backend player snapshot used by later direct-voice acoustics.
+The spatial scene is the local ArmA-to-voice-backend player snapshot consumed by direct-voice acoustics.
 
-It does not alter TeamSpeak audio yet.
+The TeamSpeak plugin uses this scene for listener orientation, remote speaker placement, velocity-based short-term prediction and per-actor voice level.
 
 ## Transport
 
