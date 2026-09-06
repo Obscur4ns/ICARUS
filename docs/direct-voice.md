@@ -1,10 +1,12 @@
-# Direct voice state
+# Direct voice
 
-This stage establishes direct-voice state and TeamSpeak identity mapping. It does not yet alter playback volume, 3D position, occlusion or radio audio.
+Direct voice uses ArmA player state to place TeamSpeak speakers in 3D space and applies a continuous distance attenuation model based on the speaker's selected vocal effort.
+
+This stage does not yet model occlusion, interiors, vehicle isolation, languages, hearing protection or radios.
 
 ## Voice levels
 
-ArmA owns the selected direct-voice level. The owning client also stores it on the player object for remote spatial-scene sampling, and only broadcasts that object variable when the selected level changes.
+ArmA owns the selected direct-voice level. The owning client stores it on the player object for remote spatial-scene sampling and only broadcasts that object variable when the selected level changes.
 
 ```text
 1 whisper
@@ -14,7 +16,28 @@ ArmA owns the selected direct-voice level. The owning client also stores it on t
 5 shout
 ```
 
-`0` remains reserved as `unknown` in the native protocol and is not selected by the public SQF setter.
+The current acoustic profiles use these reference distances:
+
+| Level | Reference distance |
+| --- | ---: |
+| Whisper | 0.75 m |
+| Quiet | 1.5 m |
+| Normal | 3 m |
+| Raised | 6 m |
+| Shout | 12 m |
+
+These values are calibration parameters, not hard hearing ranges. The attenuation curve remains continuous beyond them and never applies an arbitrary range cutoff.
+
+The first model combines geometric spreading with additional far-field damping:
+
+```text
+effectiveDistance = max(distance - 0.5 m, 0)
+geometric = reference / (reference + effectiveDistance)
+farField = 1 / (1 + effectiveDistance / (reference * 8))
+gain = geometric * farField
+```
+
+The 0.5 m near field prevents a speaker directly beside the listener from being unnecessarily attenuated. Later environment, occlusion and hearing systems will modify the result rather than being baked into these base vocal-effort curves.
 
 Read the current level:
 
@@ -34,46 +57,44 @@ Cycle it:
 [] call ICARUS_fnc_cycleVoiceLevel
 ```
 
-No attenuation distances are assigned at this stage. Those belong to the later direct-voice acoustic model.
+## 3D positioning
 
-## Speaking state
+The TeamSpeak listener is kept at the local origin. Remote ArmA actors are converted to positions relative to the local player, which avoids precision loss from large terrain world coordinates.
 
-TeamSpeak speaking state is captured from its talk-status callbacks and published back through the existing session-state snapshot.
-
-The shared session protocol is now `1.1`. The layout is unchanged from `1.0`; the previously reserved final 32-bit word in the voice-backend snapshot now carries compatible feature flags.
-
-Current flags are:
-
-- Local client is actively talking.
-- Local ArmA identity is ready for mapping.
-- Local identity announcement has been submitted to TeamSpeak.
-
-## Identity mapping
-
-ICARUS never uses TeamSpeak nicknames as player identity.
-
-The local ArmA snapshot supplies:
-
-- Player UID.
-- ArmA network ID.
-
-TeamSpeak supplies the actual sender client ID and unique identity.
-
-ICARUS plugin instances exchange a compact plugin command when an identity becomes available:
+ArmA axes are mapped into TeamSpeak coordinates as:
 
 ```text
-ICARUS-ID    1    H    <player UID>    <network ID>
+TeamSpeak X = ArmA X
+TeamSpeak Y = ArmA Z
+TeamSpeak Z = -ArmA Y
 ```
 
-Fields are tab separated.
+The listener orientation follows the ArmA head-direction vector. The forward and up vectors are normalised and kept perpendicular as required by TeamSpeak's 3D API.
 
-`H` is a hello. Existing ICARUS clients in the same TeamSpeak channel record the sender mapping and reply directly with an `I` identity message. Identity replies do not trigger another reply.
+The spatial scene arrives at approximately 10 Hz. The acoustic renderer runs at approximately 50 Hz, extrapolates each actor for at most 250 ms using ArmA velocity, and smooths positional corrections between scene snapshots.
 
-This gives a late-joining client mappings for existing ICARUS users without periodic broadcast traffic.
+A spatial scene that stops advancing for 750 ms is stale. ICARUS then removes its custom rolloff state and recentres previously controlled TeamSpeak sources rather than leaving stale positional audio active.
 
-Mappings are scoped to the current TeamSpeak connection and client ID. They are removed on moves, kicks and connection changes.
+## Rolloff callback
 
-A future ArmA multiplayer roster will decide which mapped TeamSpeak identities correspond to players in the current game session. TeamSpeak identity discovery does not become game authority.
+The TeamSpeak custom 3D rolloff callback is deliberately small. It performs no locks, allocation, logging, shared-memory reads or TeamSpeak API calls.
+
+The acoustic worker publishes only the voice level required by the callback into fixed atomic client slots. The callback then evaluates the shared native acoustic curve for the distance TeamSpeak provides.
+
+Clients without a valid ICARUS ArmA identity match are not given an ICARUS rolloff level, so their TeamSpeak volume is left untouched.
+
+## Speaking and identity state
+
+TeamSpeak speaking state is captured from talk-status callbacks and published through session state.
+
+ICARUS never uses TeamSpeak nicknames as player identity. ArmA player UID and network ID are joined to TeamSpeak's callback-provided client ID and unique identity using the versioned plugin-command handshake.
+
+Session-state protocol `1.2` adds compatible flags for:
+
+- Direct-voice acoustics active.
+- Spatial scene fresh.
+
+The binary session-state layout is unchanged from `1.1`.
 
 ## Diagnostics
 
@@ -83,31 +104,10 @@ With ArmA and TeamSpeak running:
 [] call ICARUS_fnc_directVoiceStatus
 ```
 
-Expected idle result:
+A healthy local result resembles:
 
 ```text
-state=ready;protocol=1.1;level=normal;talking=0;identityReady=1;identityAnnounced=1;clientId=...;connectionId=...
+state=ready;protocol=1.2;level=normal;talking=0;identityReady=1;identityAnnounced=1;acousticsActive=1;sceneFresh=1;clientId=...;connectionId=...
 ```
 
-While TeamSpeak is transmitting local speech:
-
-```text
-talking=1
-```
-
-Changing the ArmA voice level should immediately change the `level` field.
-
-## Runtime checks
-
-Before merging:
-
-1. Direct-voice status reports protocol `1.1`.
-2. `identityReady=1` after both ArmA and TeamSpeak are connected.
-3. `identityAnnounced=1` after plugin registration and identity publication.
-4. `talking` changes to `1` while TeamSpeak is transmitting and returns to `0`.
-5. Setting each ArmA voice level is reflected in the diagnostic output.
-6. TeamSpeak restart restores identity readiness and announcement without restarting ArmA.
-7. ArmA restart creates a new generation and the identity is announced again.
-8. Existing process-bridge and session-state tests continue to pass.
-
-Remote player-to-TeamSpeak mapping needs a later multiplayer/two-client validation because one TeamSpeak client can only prove the local side of the handshake.
+A single local client can validate listener setup, scene freshness and the native attenuation model. Actual remote 3D placement, stereo direction and perceived distance attenuation require at least two human TeamSpeak/ArmA clients.

@@ -7,7 +7,7 @@ namespace icarus::core
 {
 inline constexpr std::uint32_t session_state_magic = 0x49435353U;
 inline constexpr std::uint16_t session_state_protocol_major = 1;
-inline constexpr std::uint16_t session_state_protocol_minor = 1;
+inline constexpr std::uint16_t session_state_protocol_minor = 2;
 
 enum class ArmaSessionFlag : std::uint32_t
 {
@@ -58,6 +58,8 @@ enum class VoiceBackendSessionFlag : std::uint32_t
     local_talking = 1U << 0U,
     identity_ready = 1U << 1U,
     identity_announced = 1U << 2U,
+    direct_voice_acoustics_active = 1U << 3U,
+    spatial_scene_fresh = 1U << 4U,
 };
 
 struct alignas(8) SessionStateHeader

@@ -235,6 +235,20 @@ std::string format_session_status()
                        icarus::core::VoiceBackendSessionFlag::identity_announced
                    )
                        ? 1
+                       : 0)
+               << ";acousticsActive="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::direct_voice_acoustics_active
+                   )
+                       ? 1
+                       : 0)
+               << ";sceneFresh="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::spatial_scene_fresh
+                   )
+                       ? 1
                        : 0);
     }
 
@@ -366,6 +380,20 @@ std::string format_direct_voice_status()
                << (icarus::core::has_flag(
                        voice.payload.flags,
                        icarus::core::VoiceBackendSessionFlag::identity_announced
+                   )
+                       ? 1
+                       : 0)
+               << ";acousticsActive="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::direct_voice_acoustics_active
+                   )
+                       ? 1
+                       : 0)
+               << ";sceneFresh="
+               << (icarus::core::has_flag(
+                       voice.payload.flags,
+                       icarus::core::VoiceBackendSessionFlag::spatial_scene_fresh
                    )
                        ? 1
                        : 0)
